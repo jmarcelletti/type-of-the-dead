@@ -45,8 +45,6 @@ const CANVAS_H = 650;
 const GROUND_Y = CANVAS_H - 100;
 const PLAYER_X = CANVAS_W / 2;
 const PLAYER_Y = CANVAS_H - 80;
-const FPS = 60;
-const FRAME_TIME = 1000 / FPS;
 
 // --- Word Lists ---
 const WORDS = {
@@ -78,8 +76,87 @@ const WORDS = {
     'juggernaut','kettledrum','laceration','malevolent','necromancer',
     'obliterate','pandemonium','relentless','suffocate','trepidation',
     'unforgiving','vulnerable','wanderlust','xenophobia','yellowjacket'
+  ],
+  extreme: [
+    'electromagnetic','hyperventilating','uncomfortable','psychologically',
+    'interconnected','cardiovascular','groundbreaking','unprecedented',
+    'counterproductive','distinguishable','overwhelming','comprehensive',
+    'claustrophobic','uncontrollable','extraordinaire','disproportionate',
+    'temperamental','incomprehensible','overexaggerate','sentimentality',
+    'biodegradable','characterization','communication','accountability',
+    'infrastructure','recommendation','organizational','environmental',
+    'pharmaceutical','simultaneously','procrastination','rehabilitation',
+    'misunderstanding','acknowledgement','conceptualization','experimentation',
+    'inconsequential','revolutionizing','compartmentalize','extraordinarily'
+  ],
+  nightmare: [
+    'deoxyribonucleic','internationalization','counterrevolutionary',
+    'disproportionately','incomprehensibility','electroencephalograph',
+    'unconstitutionality','compartmentalization','oversimplification',
+    'underrepresentation','characteristically','disadvantageously',
+    'indistinguishable','microelectronics','multidimensional',
+    'nonrepresentational','overcommunicating','straightforwardness',
+    'uncharacteristically','weatherproofing','mischaracterization',
+    'overcompensating','underprivileged','uncompromisingly',
+    'intercontinental','photosynthesizing','telecommunications',
+    'disenfranchisement','neuropsychological','administratively'
+  ],
+  miniboss: [
+    'hemorrhaging viscera','decaying flesh wound','putrid reanimation',
+    'necrotic contamination','grotesque abomination','shambling corpsewalker',
+    'festering plague carrier','ravenous brain eater','unholy resurrection',
+    'cadaverous nightmare','infectious outbreak zone','decomposing horde leader',
+    'malevolent death bringer','parasitic infestation','skeletal juggernaut',
+    'corrupted gravedigger','venomous plague doctor','spectral executioner',
+    'carnivorous stalker','relentless bone crusher'
   ]
 };
+
+// Boss text scales by difficulty
+const BOSS_TEXT = {
+  easy: [
+    'the dead walk among us now',
+    'run before they find you here',
+    'we must escape this cursed place',
+    'the graveyard has opened its gates',
+    'no one survives the zombie horde',
+    'darkness falls and the dead rise'
+  ],
+  normal: [
+    'the zombie horde approaches from every dark corner of this forsaken city',
+    'we barricaded the doors but they keep breaking through the windows',
+    'only the fastest typists will survive the coming apocalypse tonight',
+    'the infection spreads rapidly and there is no known cure for it',
+    'abandoned buildings provide shelter but the dead are always hunting',
+    'every keystroke fires a bullet into the advancing wall of undead'
+  ],
+  hard: [
+    'the abandoned hospital was overrun within hours as the infected poured through every entrance and stairwell relentlessly',
+    'survivors gathered at the rooftop hoping for rescue but the helicopter never arrived and supplies were running dangerously low',
+    'the scientist claimed the virus was engineered in a laboratory but nobody believed her until it was far too late to stop it',
+    'gunfire echoed through the empty streets as the last remaining soldiers fought desperately against the unstoppable swarm of corpses'
+  ],
+  extreme: [
+    'the world as we knew it ended on a tuesday afternoon when the first reports of the dead rising came through on every news channel. within seventy two hours civilization had collapsed entirely and the streets belonged to the undead.',
+    'deep beneath the research facility the containment protocols had failed catastrophically. the experimental pathogen designated omega seven had breached every quarantine zone and was now airborne spreading across the continental united states.',
+    'the convoy of survivors pushed northward through the devastated countryside hoping to reach the rumored safe zone beyond the mountains. fuel was running low and the moaning of the horde echoed from the treeline on both sides of the crumbling highway.'
+  ],
+  nightmare: [
+    'the evacuation order came too late for most of the population. by the time the emergency broadcast system activated the streets were already flooded with the shambling remains of what had once been friends and neighbors. the military established a perimeter around the city center but it crumbled within hours as wave after wave of reanimated corpses pushed through the barricades. those who survived the initial outbreak found themselves trapped in a nightmarish landscape where every shadow could hide a lurking threat and every sound could signal the approach of the insatiable horde.',
+    'doctor chen stared at the microscope in disbelief as the dead tissue sample began regenerating before her eyes. the pathogen was unlike anything modern science had ever encountered. it rewrote cellular dna at a fundamental level transforming necrotic flesh into something that defied every known law of biology. she reached for the emergency phone to contact the centers for disease control but the line was already dead. through the reinforced laboratory window she could see the parking lot below where her colleagues were being overwhelmed by a growing mass of infected personnel. the containment had failed and she was running out of time to synthesize a countermeasure.',
+    'the last broadcast from the international space station painted a grim picture of the world below. from orbit the astronauts could see entire cities going dark one by one as the power grid collapsed under the weight of the catastrophe. massive fires burned unchecked across three continents while the highways leading out of major metropolitan areas were clogged with abandoned vehicles stretching for hundreds of miles. the crew had enough supplies for approximately six months but with mission control silent and no prospect of a resupply mission they faced an impossible decision about whether to attempt reentry into a world that might no longer have any safe landing zones remaining.'
+  ]
+};
+
+// --- Difficulty Configuration ---
+const DIFF_CONFIG = {
+  easy:      { speedMult: 0.6,  spawnMult: 1.4,  zombieCountMult: 0.7,  label: 'EASY',      color: '#44ff44' },
+  normal:    { speedMult: 1.0,  spawnMult: 1.0,  zombieCountMult: 1.0,  label: 'NORMAL',    color: '#ffffff' },
+  hard:      { speedMult: 1.3,  spawnMult: 0.7,  zombieCountMult: 1.3,  label: 'HARD',      color: '#ffaa00' },
+  extreme:   { speedMult: 1.7,  spawnMult: 0.45, zombieCountMult: 1.7,  label: 'EXTREME',   color: '#ff4444' },
+  nightmare: { speedMult: 2.2,  spawnMult: 0.3,  zombieCountMult: 2.2,  label: 'NIGHTMARE', color: '#cc00ff' }
+};
+const DIFF_ORDER = ['easy', 'normal', 'hard', 'extreme', 'nightmare'];
 
 // --- Audio Engine (Web Audio API) ---
 class AudioEngine {
@@ -94,9 +171,7 @@ class AudioEngine {
     try {
       this.ctx = new (window.AudioContext || window.webkitAudioContext)();
       this.initialized = true;
-    } catch(e) {
-      console.warn('Web Audio API not available');
-    }
+    } catch(e) {}
   }
 
   playNote(freq, duration, type, volume) {
@@ -130,14 +205,8 @@ class AudioEngine {
     source.start();
   }
 
-  gunshot() {
-    this.playNoise(0.08, 0.2);
-    this.playNote(150, 0.05, 'sawtooth', 0.15);
-  }
-
-  keystroke() {
-    this.playNote(800 + Math.random() * 400, 0.04, 'square', 0.03);
-  }
+  gunshot() { this.playNoise(0.08, 0.2); this.playNote(150, 0.05, 'sawtooth', 0.15); }
+  keystroke() { this.playNote(800 + Math.random() * 400, 0.04, 'square', 0.03); }
 
   zombieDeath() {
     this.playNoise(0.2, 0.15);
@@ -145,10 +214,7 @@ class AudioEngine {
     this.playNote(100, 0.3, 'sawtooth', 0.06);
   }
 
-  zombieHit() {
-    this.playNoise(0.05, 0.1);
-    this.playNote(300, 0.05, 'square', 0.05);
-  }
+  zombieHit() { this.playNoise(0.05, 0.1); this.playNote(300, 0.05, 'square', 0.05); }
 
   playerHit() {
     this.playNote(100, 0.3, 'sawtooth', 0.15);
@@ -156,15 +222,13 @@ class AudioEngine {
   }
 
   waveComplete() {
-    const notes = [523, 659, 784, 1047];
-    notes.forEach((freq, i) => {
+    [523, 659, 784, 1047].forEach((freq, i) => {
       setTimeout(() => this.playNote(freq, 0.2, 'square', 0.08), i * 100);
     });
   }
 
   gameOver() {
-    const notes = [400, 350, 300, 200];
-    notes.forEach((freq, i) => {
+    [400, 350, 300, 200].forEach((freq, i) => {
       setTimeout(() => this.playNote(freq, 0.4, 'sawtooth', 0.1), i * 200);
     });
   }
@@ -175,31 +239,42 @@ class AudioEngine {
   }
 
   comboSound(combo) {
-    const freq = 400 + Math.min(combo, 10) * 80;
-    this.playNote(freq, 0.1, 'triangle', 0.06);
+    this.playNote(400 + Math.min(combo, 10) * 80, 0.1, 'triangle', 0.06);
+  }
+
+  bossAppear() {
+    this.playNoise(0.5, 0.25);
+    [100, 80, 60, 50].forEach((freq, i) => {
+      setTimeout(() => this.playNote(freq, 0.5, 'sawtooth', 0.15), i * 150);
+    });
+  }
+
+  bossDeath() {
+    this.playNoise(0.6, 0.3);
+    [200, 300, 400, 500, 600, 800, 1000].forEach((freq, i) => {
+      setTimeout(() => {
+        this.playNote(freq, 0.3, 'square', 0.1);
+        this.playNoise(0.1, 0.1);
+      }, i * 80);
+    });
+  }
+
+  minibossHit() {
+    this.playNoise(0.08, 0.15);
+    this.playNote(200, 0.08, 'sawtooth', 0.1);
   }
 }
 
-// --- Particle System ---
+// --- Particle ---
 class Particle {
   constructor(x, y, vx, vy, color, life, size) {
-    this.x = x;
-    this.y = y;
-    this.vx = vx;
-    this.vy = vy;
-    this.color = color;
-    this.life = life;
-    this.maxLife = life;
-    this.size = size || 3;
+    this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+    this.color = color; this.life = life; this.maxLife = life; this.size = size || 3;
   }
-
   update(dt) {
-    this.x += this.vx * dt;
-    this.y += this.vy * dt;
-    this.vy += 200 * dt; // gravity
-    this.life -= dt;
+    this.x += this.vx * dt; this.y += this.vy * dt;
+    this.vy += 200 * dt; this.life -= dt;
   }
-
   draw(ctx) {
     const alpha = Math.max(0, this.life / this.maxLife);
     ctx.globalAlpha = alpha;
@@ -213,31 +288,47 @@ class Particle {
 
 // --- Zombie Class ---
 class Zombie {
-  constructor(word, x, y, speed) {
+  // type: 'normal', 'miniboss', 'boss'
+  constructor(word, x, y, speed, type) {
     this.word = word.toUpperCase();
     this.x = x;
     this.y = y;
     this.speed = speed;
-    this.typed = 0; // number of letters typed
+    this.typed = 0;
     this.alive = true;
     this.health = 1.0;
+    this.type = type || 'normal';
     this.targetX = PLAYER_X + (Math.random() - 0.5) * 100;
     this.targetY = PLAYER_Y;
     this.wobble = Math.random() * Math.PI * 2;
     this.wobbleSpeed = 1 + Math.random() * 2;
-    this.radius = 25 + Math.random() * 8;
     this.flashTimer = 0;
     this.deathTimer = 0;
     this.dying = false;
+    this.pulseTimer = 0;
+    this.damageAmount = 1;
+
+    if (this.type === 'normal') {
+      this.radius = 25 + Math.random() * 8;
+    } else if (this.type === 'miniboss') {
+      this.radius = 38 + Math.random() * 5;
+      this.damageAmount = 2;
+    } else if (this.type === 'boss') {
+      this.radius = 60;
+      this.damageAmount = 3;
+      this.wobbleSpeed = 0.5;
+    }
   }
 
   update(dt) {
     if (this.dying) {
       this.deathTimer += dt;
-      return this.deathTimer < 0.3;
+      const deathDur = this.type === 'boss' ? 1.0 : (this.type === 'miniboss' ? 0.5 : 0.3);
+      return this.deathTimer < deathDur;
     }
 
     this.wobble += this.wobbleSpeed * dt;
+    this.pulseTimer += dt;
     const dx = this.targetX - this.x;
     const dy = this.targetY - this.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -245,9 +336,7 @@ class Zombie {
       this.x += (dx / dist) * this.speed * dt + Math.sin(this.wobble) * 0.5;
       this.y += (dy / dist) * this.speed * dt;
     }
-
     if (this.flashTimer > 0) this.flashTimer -= dt;
-
     this.health = 1 - (this.typed / this.word.length);
     return true;
   }
@@ -257,14 +346,28 @@ class Zombie {
   }
 
   draw(ctx) {
+    const deathDur = this.type === 'boss' ? 1.0 : (this.type === 'miniboss' ? 0.5 : 0.3);
+
     if (this.dying) {
-      // Death animation - expand and fade
-      const t = this.deathTimer / 0.3;
+      const t = this.deathTimer / deathDur;
       ctx.globalAlpha = 1 - t;
-      ctx.fillStyle = '#ff6600';
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.radius * (1 + t * 2), 0, Math.PI * 2);
-      ctx.fill();
+      if (this.type === 'boss') {
+        // Boss explodes outward with rings
+        ctx.strokeStyle = '#ff6600';
+        ctx.lineWidth = 4 * (1 - t);
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius * (1 + t * 4), 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = '#ff4400';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius * (1 - t * 0.5), 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = this.type === 'miniboss' ? '#aa00ff' : '#ff6600';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius * (1 + t * 2), 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.globalAlpha = 1;
       return;
     }
@@ -275,23 +378,31 @@ class Zombie {
     ctx.ellipse(this.x, this.y + this.radius + 5, this.radius * 0.8, 8, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Glow
+    if (this.type === 'boss') {
+      this._drawBoss(ctx);
+    } else if (this.type === 'miniboss') {
+      this._drawMiniboss(ctx);
+    } else {
+      this._drawNormal(ctx);
+    }
+
+    this._drawWord(ctx);
+  }
+
+  _drawNormal(ctx) {
     ctx.shadowBlur = 15;
     ctx.shadowColor = this.flashTimer > 0 ? 'rgba(255, 255, 0, 0.8)' : 'rgba(255, 0, 0, 0.4)';
 
-    // Body
     const bodyColor = this.flashTimer > 0 ? '#ffffff' : (this.health < 0.4 ? '#8b0000' : '#cc3333');
     ctx.fillStyle = bodyColor;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.fill();
 
-    // Inner body detail
     ctx.fillStyle = this.health < 0.4 ? '#660000' : '#aa2222';
     ctx.beginPath();
     ctx.arc(this.x + 3, this.y + 5, this.radius * 0.6, 0, Math.PI * 2);
     ctx.fill();
-
     ctx.shadowBlur = 0;
 
     // Eyes
@@ -300,8 +411,6 @@ class Zombie {
     ctx.arc(this.x - 8, this.y - 5, 5, 0, Math.PI * 2);
     ctx.arc(this.x + 8, this.y - 5, 5, 0, Math.PI * 2);
     ctx.fill();
-
-    // Pupils
     ctx.fillStyle = '#000';
     ctx.beginPath();
     ctx.arc(this.x - 7, this.y - 5, 2, 0, Math.PI * 2);
@@ -309,29 +418,241 @@ class Zombie {
     ctx.fill();
 
     // Mouth
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.arc(this.x, this.y + 8, 8, 0.1 * Math.PI, 0.9 * Math.PI);
     ctx.stroke();
 
     // Health bar
-    const barW = 60;
-    const barH = 6;
+    this._drawHealthBar(ctx, 60);
+  }
+
+  _drawMiniboss(ctx) {
+    const pulse = Math.sin(this.pulseTimer * 3) * 0.08;
+
+    // Aura
+    ctx.shadowBlur = 25;
+    ctx.shadowColor = this.flashTimer > 0 ? 'rgba(255, 255, 0, 0.8)' : 'rgba(160, 0, 255, 0.6)';
+
+    // Spikes
+    const spikeCount = 8;
+    ctx.fillStyle = '#6600aa';
+    for (let i = 0; i < spikeCount; i++) {
+      const angle = (i / spikeCount) * Math.PI * 2 + this.pulseTimer * 0.5;
+      const spikeLen = this.radius * (0.5 + pulse);
+      const baseW = 8;
+      const sx = this.x + Math.cos(angle) * this.radius;
+      const sy = this.y + Math.sin(angle) * this.radius;
+      const tx = this.x + Math.cos(angle) * (this.radius + spikeLen);
+      const ty = this.y + Math.sin(angle) * (this.radius + spikeLen);
+      const perpX = -Math.sin(angle) * baseW;
+      const perpY = Math.cos(angle) * baseW;
+      ctx.beginPath();
+      ctx.moveTo(sx - perpX, sy - perpY);
+      ctx.lineTo(tx, ty);
+      ctx.lineTo(sx + perpX, sy + perpY);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Body
+    const bodyColor = this.flashTimer > 0 ? '#ffffff' : (this.health < 0.4 ? '#440066' : '#7722bb');
+    ctx.fillStyle = bodyColor;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius * (1 + pulse), 0, Math.PI * 2);
+    ctx.fill();
+
+    // Inner shading
+    ctx.fillStyle = this.health < 0.4 ? '#330044' : '#5500aa';
+    ctx.beginPath();
+    ctx.arc(this.x + 4, this.y + 6, this.radius * 0.55, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Three eyes
+    ctx.fillStyle = '#ff0000';
+    ctx.beginPath();
+    ctx.arc(this.x - 12, this.y - 6, 6, 0, Math.PI * 2);
+    ctx.arc(this.x + 12, this.y - 6, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ff4444';
+    ctx.beginPath();
+    ctx.arc(this.x, this.y - 14, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(this.x - 11, this.y - 6, 2.5, 0, Math.PI * 2);
+    ctx.arc(this.x + 13, this.y - 6, 2.5, 0, Math.PI * 2);
+    ctx.arc(this.x + 1, this.y - 14, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Jagged mouth
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    const mouthY = this.y + 10;
+    ctx.moveTo(this.x - 15, mouthY);
+    for (let i = 0; i < 6; i++) {
+      ctx.lineTo(this.x - 15 + i * 6, mouthY + (i % 2 ? -5 : 5));
+    }
+    ctx.stroke();
+
+    // Mini-boss label
+    ctx.font = 'bold 10px monospace';
+    ctx.fillStyle = '#cc66ff';
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+    const label = 'MINI-BOSS';
+    const lw = ctx.measureText(label).width;
+    ctx.strokeText(label, this.x - lw / 2, this.y + this.radius + 18);
+    ctx.fillText(label, this.x - lw / 2, this.y + this.radius + 18);
+
+    this._drawHealthBar(ctx, 80);
+  }
+
+  _drawBoss(ctx) {
+    const pulse = Math.sin(this.pulseTimer * 2) * 0.05;
+    const r = this.radius * (1 + pulse);
+
+    // Outer aura rings
+    ctx.strokeStyle = `rgba(255, 50, 0, ${0.2 + Math.sin(this.pulseTimer * 4) * 0.1})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, r + 20 + Math.sin(this.pulseTimer * 3) * 5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = `rgba(255, 100, 0, ${0.15 + Math.sin(this.pulseTimer * 3) * 0.1})`;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, r + 35 + Math.sin(this.pulseTimer * 2) * 8, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.shadowBlur = 40;
+    ctx.shadowColor = this.flashTimer > 0 ? 'rgba(255, 255, 0, 1)' : 'rgba(255, 0, 0, 0.8)';
+
+    // Horns
+    ctx.fillStyle = '#442200';
+    // Left horn
+    ctx.beginPath();
+    ctx.moveTo(this.x - 30, this.y - r * 0.6);
+    ctx.lineTo(this.x - 55, this.y - r - 30);
+    ctx.lineTo(this.x - 15, this.y - r * 0.3);
+    ctx.closePath();
+    ctx.fill();
+    // Right horn
+    ctx.beginPath();
+    ctx.moveTo(this.x + 30, this.y - r * 0.6);
+    ctx.lineTo(this.x + 55, this.y - r - 30);
+    ctx.lineTo(this.x + 15, this.y - r * 0.3);
+    ctx.closePath();
+    ctx.fill();
+
+    // Body
+    const bodyColor = this.flashTimer > 0 ? '#ffffff' : (this.health < 0.3 ? '#550000' : '#991111');
+    ctx.fillStyle = bodyColor;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Body detail - cracks / texture
+    ctx.strokeStyle = this.health < 0.3 ? '#330000' : '#661111';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 + 0.3;
+      ctx.beginPath();
+      ctx.moveTo(this.x + Math.cos(a) * r * 0.3, this.y + Math.sin(a) * r * 0.3);
+      ctx.lineTo(this.x + Math.cos(a) * r * 0.8, this.y + Math.sin(a) * r * 0.8);
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+
+    // Eyes (large, menacing)
+    ctx.fillStyle = '#ff0000';
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = 'rgba(255, 0, 0, 0.8)';
+    ctx.beginPath();
+    ctx.ellipse(this.x - 18, this.y - 10, 12, 8, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(this.x + 18, this.y - 10, 12, 8, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // Slit pupils
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(this.x - 17, this.y - 10, 3, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(this.x + 19, this.y - 10, 3, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Mouth with teeth
+    ctx.fillStyle = '#330000';
+    ctx.beginPath();
+    ctx.ellipse(this.x, this.y + 18, 25, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Teeth
+    ctx.fillStyle = '#ccccaa';
+    for (let i = 0; i < 7; i++) {
+      const tx = this.x - 21 + i * 7;
+      ctx.fillRect(tx, this.y + 10, 5, 8);
+    }
+    for (let i = 0; i < 7; i++) {
+      const tx = this.x - 21 + i * 7;
+      ctx.fillRect(tx, this.y + 22, 5, 7);
+    }
+
+    // Boss label
+    ctx.font = 'bold 14px monospace';
+    ctx.fillStyle = '#ff4444';
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+    const label = 'BOSS';
+    const lw = ctx.measureText(label).width;
+    ctx.strokeText(label, this.x - lw / 2, this.y + r + 22);
+    ctx.fillText(label, this.x - lw / 2, this.y + r + 22);
+
+    // Boss health bar (wider)
+    this._drawHealthBar(ctx, 140);
+  }
+
+  _drawHealthBar(ctx, barW) {
+    const barH = this.type === 'boss' ? 10 : 6;
     const barX = this.x - barW / 2;
-    const barY = this.y - this.radius - 35;
+    const barY = this.y - this.radius - (this.type === 'boss' ? 50 : 35);
+
     ctx.fillStyle = '#333';
     ctx.fillRect(barX, barY, barW, barH);
-    const hpColor = this.health > 0.5 ? '#00ff00' : (this.health > 0.25 ? '#ffaa00' : '#ff4444');
+
+    let hpColor;
+    if (this.type === 'boss') {
+      hpColor = this.health > 0.5 ? '#ff4444' : (this.health > 0.25 ? '#ff2200' : '#cc0000');
+    } else if (this.type === 'miniboss') {
+      hpColor = this.health > 0.5 ? '#aa44ff' : (this.health > 0.25 ? '#8800cc' : '#660099');
+    } else {
+      hpColor = this.health > 0.5 ? '#00ff00' : (this.health > 0.25 ? '#ffaa00' : '#ff4444');
+    }
     ctx.fillStyle = hpColor;
     ctx.fillRect(barX, barY, barW * this.health, barH);
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
     ctx.strokeRect(barX, barY, barW, barH);
 
-    // Word
-    ctx.font = 'bold 22px monospace';
+    // Boss: show HP percentage
+    if (this.type === 'boss') {
+      ctx.font = 'bold 10px monospace';
+      ctx.fillStyle = '#fff';
+      const pct = Math.ceil(this.health * 100) + '%';
+      const pw = ctx.measureText(pct).width;
+      ctx.fillText(pct, this.x - pw / 2, barY - 3);
+    }
+  }
+
+  _drawWord(ctx) {
+    if (this.type === 'boss') {
+      this._drawBossWord(ctx);
+      return;
+    }
+
+    const fontSize = this.type === 'miniboss' ? 18 : 22;
+    ctx.font = `bold ${fontSize}px monospace`;
+    const barY = this.y - this.radius - (this.type === 'boss' ? 50 : 35);
     const wordY = barY - 8;
+
     for (let i = 0; i < this.word.length; i++) {
       const ch = this.word[i];
       const totalWidth = ctx.measureText(this.word).width;
@@ -342,64 +663,106 @@ class Zombie {
       ctx.strokeText(ch, charX, wordY);
 
       if (i < this.typed) {
-        ctx.fillStyle = '#00ff41'; // typed letters in green
+        ctx.fillStyle = '#00ff41';
       } else if (this.typed > 0 && i === this.typed) {
-        ctx.fillStyle = '#ffff00'; // next letter to type in yellow
+        ctx.fillStyle = '#ffff00';
       } else {
         ctx.fillStyle = '#ffffff';
       }
       ctx.fillText(ch, charX, wordY);
     }
   }
+
+  _drawBossWord(ctx) {
+    // Render boss text in a wrapped box above the boss
+    const maxLineW = 400;
+    const fontSize = 16;
+    ctx.font = `bold ${fontSize}px monospace`;
+
+    // Word-wrap the text
+    const words = [];
+    let current = '';
+    for (let i = 0; i < this.word.length; i++) {
+      current += this.word[i];
+      if (this.word[i] === ' ' || i === this.word.length - 1) {
+        words.push(current);
+        current = '';
+      }
+    }
+
+    const lines = [];
+    let line = '';
+    for (const w of words) {
+      const test = line + w;
+      if (ctx.measureText(test).width > maxLineW && line.length > 0) {
+        lines.push(line);
+        line = w;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+
+    const lineH = fontSize + 4;
+    const boxH = lines.length * lineH + 16;
+    const boxW = maxLineW + 30;
+    const boxX = this.x - boxW / 2;
+    const boxY = this.y - this.radius - boxH - 55;
+
+    // Background box
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+    ctx.fillRect(boxX, boxY, boxW, boxH);
+    ctx.strokeStyle = '#ff4444';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+    // Draw text char by char with coloring
+    let charIdx = 0;
+    for (let li = 0; li < lines.length; li++) {
+      const ly = boxY + 14 + li * lineH;
+      let cx = boxX + 15;
+      for (let ci = 0; ci < lines[li].length; ci++) {
+        const ch = lines[li][ci];
+        if (charIdx < this.typed) {
+          ctx.fillStyle = '#00ff41';
+        } else if (charIdx === this.typed) {
+          ctx.fillStyle = '#ffff00';
+        } else {
+          ctx.fillStyle = '#cccccc';
+        }
+        ctx.fillText(ch, cx, ly);
+        cx += ctx.measureText(ch).width;
+        charIdx++;
+      }
+    }
+  }
 }
 
-// --- Bullet Tracer ---
+// --- Tracer ---
 class Tracer {
   constructor(x1, y1, x2, y2) {
-    this.x1 = x1; this.y1 = y1;
-    this.x2 = x2; this.y2 = y2;
-    this.life = 0.15;
+    this.x1 = x1; this.y1 = y1; this.x2 = x2; this.y2 = y2; this.life = 0.15;
   }
-
-  update(dt) {
-    this.life -= dt;
-    return this.life > 0;
-  }
-
+  update(dt) { this.life -= dt; return this.life > 0; }
   draw(ctx) {
-    const alpha = this.life / 0.15;
-    ctx.strokeStyle = `rgba(0, 255, 65, ${alpha})`;
+    const a = this.life / 0.15;
+    ctx.strokeStyle = `rgba(0, 255, 65, ${a})`;
     ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(this.x1, this.y1);
-    ctx.lineTo(this.x2, this.y2);
-    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(this.x1, this.y1); ctx.lineTo(this.x2, this.y2); ctx.stroke();
   }
 }
 
 // --- Muzzle Flash ---
 class MuzzleFlash {
-  constructor(x, y) {
-    this.x = x; this.y = y;
-    this.life = 0.06;
-  }
-
-  update(dt) {
-    this.life -= dt;
-    return this.life > 0;
-  }
-
+  constructor(x, y) { this.x = x; this.y = y; this.life = 0.06; }
+  update(dt) { this.life -= dt; return this.life > 0; }
   draw(ctx) {
-    const alpha = this.life / 0.06;
-    const size = 12 * alpha;
-    ctx.fillStyle = `rgba(255, 255, 100, ${alpha * 0.8})`;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y - 15, size, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = `rgba(255, 200, 50, ${alpha * 0.5})`;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y - 15, size * 1.5, 0, Math.PI * 2);
-    ctx.fill();
+    const a = this.life / 0.06;
+    const s = 12 * a;
+    ctx.fillStyle = `rgba(255, 255, 100, ${a * 0.8})`;
+    ctx.beginPath(); ctx.arc(this.x, this.y - 15, s, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = `rgba(255, 200, 50, ${a * 0.5})`;
+    ctx.beginPath(); ctx.arc(this.x, this.y - 15, s * 1.5, 0, Math.PI * 2); ctx.fill();
   }
 }
 
@@ -413,16 +776,14 @@ class Game {
     this.container = document.getElementById('gameContainer');
 
     this.audio = new AudioEngine();
-    this.state = 'menu'; // menu, playing, paused, gameover, highscores, options
-    this.difficulty = 'normal'; // easy, normal, hard
+    this.state = 'menu';
+    this.difficulty = 'normal';
 
-    // Game objects
     this.zombies = [];
     this.particles = [];
     this.tracers = [];
     this.flashes = [];
 
-    // Game state
     this.score = 0;
     this.wave = 0;
     this.lives = 3;
@@ -434,58 +795,44 @@ class Game {
     this.currentInput = '';
     this.targetZombie = null;
     this.waveTimer = 0;
-    this.waveDelay = 3;
     this.zombiesInWave = 0;
     this.zombiesSpawned = 0;
     this.spawnTimer = 0;
     this.waveComplete = false;
     this.waveAnnounceTimer = 0;
+    this.isBossWave = false;
+    this.bossSpawned = false;
     this.screenShake = 0;
     this.screenShakeX = 0;
     this.screenShakeY = 0;
 
-    // Menu state
     this.menuSelection = 0;
     this.menuItems = ['START GAME', 'HIGH SCORES', 'OPTIONS'];
     this.optionSelection = 0;
 
-    // High scores
     this.highScores = this.loadHighScores();
     this.stats = this.loadStats();
-
-    // Timing
     this.lastTime = 0;
 
-    // Input
     this.setupInput();
-
-    // Start loop
     requestAnimationFrame((t) => this.loop(t));
   }
 
   // --- Storage ---
   loadHighScores() {
-    try {
-      return JSON.parse(localStorage.getItem('totd_highscores')) || [];
-    } catch { return []; }
+    try { return JSON.parse(localStorage.getItem('totd_highscores')) || []; } catch { return []; }
   }
-
   saveHighScores() {
-    try {
-      localStorage.setItem('totd_highscores', JSON.stringify(this.highScores.slice(0, 10)));
-    } catch {}
+    try { localStorage.setItem('totd_highscores', JSON.stringify(this.highScores.slice(0, 10))); } catch {}
   }
-
   loadStats() {
     try {
       return JSON.parse(localStorage.getItem('totd_stats')) || { totalKills: 0, totalGames: 0, bestWave: 0, bestCombo: 0 };
     } catch { return { totalKills: 0, totalGames: 0, bestWave: 0, bestCombo: 0 }; }
   }
-
   saveStats() {
     try { localStorage.setItem('totd_stats', JSON.stringify(this.stats)); } catch {}
   }
-
   addHighScore(score, wave) {
     const entry = { score, wave, date: new Date().toLocaleDateString(), difficulty: this.difficulty };
     this.highScores.push(entry);
@@ -498,13 +845,10 @@ class Game {
   // --- Input ---
   setupInput() {
     this.container.addEventListener('keydown', (e) => {
-      // Prevent browser defaults for game keys
       if (['Space', 'Escape', 'ArrowUp', 'ArrowDown', 'Enter', 'Tab'].includes(e.code)) {
         e.preventDefault();
       }
-
       this.audio.init();
-
       switch (this.state) {
         case 'menu': this.handleMenuInput(e); break;
         case 'playing': this.handleGameInput(e); break;
@@ -514,7 +858,6 @@ class Game {
         case 'options': this.handleOptionsInput(e); break;
       }
     });
-
     this.container.focus();
   }
 
@@ -534,12 +877,10 @@ class Game {
   }
 
   handleGameInput(e) {
-    if (e.code === 'Escape') {
-      this.state = 'paused';
-      return;
-    }
+    if (e.code === 'Escape') { this.state = 'paused'; return; }
 
     if (e.code === 'Backspace') {
+      e.preventDefault();
       if (this.currentInput.length > 0) {
         this.currentInput = this.currentInput.slice(0, -1);
         if (this.currentInput.length === 0) {
@@ -552,87 +893,96 @@ class Game {
       return;
     }
 
-    // Only process single characters
-    if (e.key.length !== 1) return;
-    const ch = e.key.toUpperCase();
-    if (!/[A-Z]/.test(ch)) return;
+    // Accept letters, space (for boss/miniboss phrases), and common punctuation
+    let ch = null;
+    if (e.code === 'Space') {
+      ch = ' ';
+    } else if (e.key.length === 1) {
+      ch = e.key.toUpperCase();
+      // Allow letters, common punctuation in boss text
+      if (!/[A-Z .,;:!?'\-]/.test(ch)) return;
+    } else {
+      return;
+    }
 
     this.audio.keystroke();
     this.totalLettersTyped++;
-    const newInput = this.currentInput + ch;
 
     // If we have a target, check against it
     if (this.targetZombie && this.targetZombie.alive) {
       const nextChar = this.targetZombie.word[this.currentInput.length];
       if (ch === nextChar) {
-        this.currentInput = newInput;
+        this.currentInput += ch;
         this.targetZombie.typed = this.currentInput.length;
         this.targetZombie.flashTimer = 0.08;
-        this.audio.zombieHit();
 
-        // Fire tracer
+        if (this.targetZombie.type === 'boss') {
+          this.audio.minibossHit();
+        } else {
+          this.audio.zombieHit();
+        }
+
         this.tracers.push(new Tracer(PLAYER_X, PLAYER_Y, this.targetZombie.x, this.targetZombie.y));
         this.flashes.push(new MuzzleFlash(PLAYER_X, PLAYER_Y));
         this.audio.gunshot();
 
-        // Spawn hit particles
         for (let i = 0; i < 3; i++) {
+          const pcolor = this.targetZombie.type === 'miniboss' ? '#aa44ff' :
+                         (this.targetZombie.type === 'boss' ? '#ff2200' : '#ff6644');
           this.particles.push(new Particle(
             this.targetZombie.x, this.targetZombie.y,
             (Math.random() - 0.5) * 150, (Math.random() - 0.5) * 150,
-            '#ff6644', 0.3 + Math.random() * 0.3, 3
+            pcolor, 0.3 + Math.random() * 0.3, 3
           ));
         }
 
-        // Check if zombie is dead
         if (this.currentInput.length === this.targetZombie.word.length) {
           this.killZombie(this.targetZombie);
           this.currentInput = '';
           this.targetZombie = null;
         }
       } else {
-        // Wrong letter - error
         this.totalErrors++;
         this.combo = 0;
         this.screenShake = 0.1;
       }
     } else {
-      // No target - find matching zombie
-      const match = this.zombies.find(z => z.alive && !z.dying && z.word[0] === ch && z !== this.targetZombie);
-      if (match) {
-        this.targetZombie = match;
-        this.currentInput = ch;
-        match.typed = 1;
-        match.flashTimer = 0.08;
-        this.audio.zombieHit();
-        this.tracers.push(new Tracer(PLAYER_X, PLAYER_Y, match.x, match.y));
-        this.flashes.push(new MuzzleFlash(PLAYER_X, PLAYER_Y));
-        this.audio.gunshot();
+      // No target - find matching zombie (only match on letters, not spaces)
+      if (ch !== ' ') {
+        const match = this.zombies.find(z => z.alive && !z.dying && z.word[0] === ch && z !== this.targetZombie);
+        if (match) {
+          this.targetZombie = match;
+          this.currentInput = ch;
+          match.typed = 1;
+          match.flashTimer = 0.08;
+          this.audio.zombieHit();
+          this.tracers.push(new Tracer(PLAYER_X, PLAYER_Y, match.x, match.y));
+          this.flashes.push(new MuzzleFlash(PLAYER_X, PLAYER_Y));
+          this.audio.gunshot();
 
-        for (let i = 0; i < 3; i++) {
-          this.particles.push(new Particle(
-            match.x, match.y,
-            (Math.random() - 0.5) * 150, (Math.random() - 0.5) * 150,
-            '#ff6644', 0.3, 3
-          ));
-        }
+          for (let i = 0; i < 3; i++) {
+            this.particles.push(new Particle(
+              match.x, match.y,
+              (Math.random() - 0.5) * 150, (Math.random() - 0.5) * 150,
+              '#ff6644', 0.3, 3
+            ));
+          }
 
-        if (match.word.length === 1) {
-          this.killZombie(match);
-          this.currentInput = '';
-          this.targetZombie = null;
+          if (match.word.length === 1) {
+            this.killZombie(match);
+            this.currentInput = '';
+            this.targetZombie = null;
+          }
+        } else {
+          this.totalErrors++;
+          this.combo = 0;
         }
-      } else {
-        this.totalErrors++;
-        this.combo = 0;
       }
     }
   }
 
   handlePauseInput(e) {
-    if (e.code === 'Escape' || e.code === 'Space') {
-      this.state = 'playing';
-    }
+    if (e.code === 'Escape' || e.code === 'Space') this.state = 'playing';
   }
 
   handleGameOverInput(e) {
@@ -643,16 +993,11 @@ class Game {
   }
 
   handleHighScoreInput(e) {
-    if (e.code === 'Escape' || e.code === 'Space' || e.code === 'Enter') {
-      this.state = 'menu';
-    }
+    if (e.code === 'Escape' || e.code === 'Space' || e.code === 'Enter') this.state = 'menu';
   }
 
   handleOptionsInput(e) {
-    if (e.code === 'Escape') {
-      this.state = 'menu';
-      return;
-    }
+    if (e.code === 'Escape') { this.state = 'menu'; return; }
     if (e.code === 'ArrowUp') {
       this.optionSelection = Math.max(0, this.optionSelection - 1);
       this.audio.keystroke();
@@ -662,12 +1007,10 @@ class Game {
     } else if (e.code === 'ArrowLeft' || e.code === 'ArrowRight' || e.code === 'Enter' || e.code === 'Space') {
       this.audio.menuSelect();
       if (this.optionSelection === 0) {
-        // Cycle difficulty
-        const diffs = ['easy', 'normal', 'hard'];
-        const idx = diffs.indexOf(this.difficulty);
+        const idx = DIFF_ORDER.indexOf(this.difficulty);
         this.difficulty = e.code === 'ArrowLeft'
-          ? diffs[(idx - 1 + 3) % 3]
-          : diffs[(idx + 1) % 3];
+          ? DIFF_ORDER[(idx - 1 + DIFF_ORDER.length) % DIFF_ORDER.length]
+          : DIFF_ORDER[(idx + 1) % DIFF_ORDER.length];
       } else if (this.optionSelection === 1) {
         this.audio.muted = !this.audio.muted;
       }
@@ -679,7 +1022,7 @@ class Game {
     this.state = 'playing';
     this.score = 0;
     this.wave = 0;
-    this.lives = 3;
+    this.lives = this.difficulty === 'nightmare' ? 2 : (this.difficulty === 'extreme' ? 2 : 3);
     this.combo = 0;
     this.maxCombo = 0;
     this.totalKills = 0;
@@ -693,45 +1036,81 @@ class Game {
     this.flashes = [];
     this.waveComplete = true;
     this.waveTimer = 1.5;
+    this.isBossWave = false;
+    this.bossSpawned = false;
     this.screenShake = 0;
   }
 
   startWave() {
     this.wave++;
     this.waveComplete = false;
-    this.waveAnnounceTimer = 2.0;
+    this.isBossWave = (this.wave % 3 === 0);
+    this.bossSpawned = false;
 
-    const diffMult = this.difficulty === 'easy' ? 0.7 : (this.difficulty === 'hard' ? 1.4 : 1.0);
-    this.zombiesInWave = Math.floor((3 + this.wave * 2) * diffMult);
+    const cfg = DIFF_CONFIG[this.difficulty];
+
+    if (this.isBossWave) {
+      // Boss wave: 1 boss + some normal escorts (more on harder difficulties)
+      const escorts = Math.floor(this.wave * 0.5 * cfg.zombieCountMult);
+      this.zombiesInWave = 1 + escorts; // boss counts as 1
+      this.waveAnnounceTimer = 3.0;
+    } else {
+      this.zombiesInWave = Math.floor((3 + this.wave * 2) * cfg.zombieCountMult);
+      this.waveAnnounceTimer = 2.0;
+    }
+
     this.zombiesSpawned = 0;
     this.spawnTimer = 0;
     this.audio.waveComplete();
   }
 
-  getWordForWave() {
+  getDiffConfig() {
+    return DIFF_CONFIG[this.difficulty];
+  }
+
+  getWordForWave(forcePool) {
     let pool;
-    if (this.wave <= 2) {
-      pool = WORDS.easy;
-    } else if (this.wave <= 5) {
-      pool = Math.random() < 0.6 ? WORDS.easy : WORDS.medium;
-    } else if (this.wave <= 8) {
-      pool = Math.random() < 0.3 ? WORDS.easy : (Math.random() < 0.6 ? WORDS.medium : WORDS.hard);
+    if (forcePool) {
+      pool = WORDS[forcePool] || WORDS.medium;
+    } else if (this.difficulty === 'nightmare') {
+      if (this.wave <= 1) pool = WORDS.medium;
+      else if (this.wave <= 3) pool = Math.random() < 0.3 ? WORDS.medium : WORDS.hard;
+      else if (this.wave <= 6) pool = Math.random() < 0.2 ? WORDS.hard : WORDS.extreme;
+      else pool = Math.random() < 0.3 ? WORDS.extreme : WORDS.nightmare;
+    } else if (this.difficulty === 'extreme') {
+      if (this.wave <= 1) pool = WORDS.easy;
+      else if (this.wave <= 3) pool = Math.random() < 0.4 ? WORDS.medium : WORDS.hard;
+      else if (this.wave <= 6) pool = Math.random() < 0.3 ? WORDS.hard : WORDS.extreme;
+      else pool = Math.random() < 0.4 ? WORDS.extreme : WORDS.hard;
+    } else if (this.difficulty === 'hard') {
+      if (this.wave <= 2) pool = Math.random() < 0.5 ? WORDS.easy : WORDS.medium;
+      else if (this.wave <= 5) pool = Math.random() < 0.3 ? WORDS.medium : WORDS.hard;
+      else pool = Math.random() < 0.2 ? WORDS.medium : WORDS.hard;
+    } else if (this.difficulty === 'normal') {
+      if (this.wave <= 2) pool = WORDS.easy;
+      else if (this.wave <= 5) pool = Math.random() < 0.6 ? WORDS.easy : WORDS.medium;
+      else if (this.wave <= 8) pool = Math.random() < 0.3 ? WORDS.easy : (Math.random() < 0.6 ? WORDS.medium : WORDS.hard);
+      else pool = Math.random() < 0.1 ? WORDS.easy : (Math.random() < 0.5 ? WORDS.medium : WORDS.hard);
     } else {
-      pool = Math.random() < 0.1 ? WORDS.easy : (Math.random() < 0.5 ? WORDS.medium : WORDS.hard);
+      // easy difficulty
+      if (this.wave <= 3) pool = WORDS.easy;
+      else if (this.wave <= 6) pool = Math.random() < 0.7 ? WORDS.easy : WORDS.medium;
+      else pool = Math.random() < 0.4 ? WORDS.easy : WORDS.medium;
     }
 
-    // Avoid duplicate words on screen
     const activeWords = new Set(this.zombies.filter(z => z.alive).map(z => z.word));
     let word;
     let attempts = 0;
     do {
       word = pool[Math.floor(Math.random() * pool.length)].toUpperCase();
       attempts++;
-    } while (activeWords.has(word) && attempts < 20);
+    } while (activeWords.has(word) && attempts < 30);
 
-    // Also avoid zombies starting with the same letter as another active zombie
-    const activeFirstLetters = new Set(this.zombies.filter(z => z.alive && z.typed === 0).map(z => z.word[0]));
-    if (activeFirstLetters.has(word[0]) && attempts < 40) {
+    // Avoid first-letter collisions for single-word zombies
+    const activeFirstLetters = new Set(
+      this.zombies.filter(z => z.alive && z.typed === 0 && z.type === 'normal').map(z => z.word[0])
+    );
+    if (activeFirstLetters.has(word[0])) {
       let retry = 0;
       while (activeFirstLetters.has(word[0]) && retry < 20) {
         word = pool[Math.floor(Math.random() * pool.length)].toUpperCase();
@@ -742,30 +1121,90 @@ class Game {
     return word;
   }
 
+  getBossText() {
+    // Select boss text based on difficulty
+    let pool;
+    if (this.difficulty === 'nightmare') pool = BOSS_TEXT.nightmare;
+    else if (this.difficulty === 'extreme') pool = BOSS_TEXT.extreme;
+    else if (this.difficulty === 'hard') pool = BOSS_TEXT.hard;
+    else if (this.difficulty === 'normal') pool = BOSS_TEXT.normal;
+    else pool = BOSS_TEXT.easy;
+
+    return pool[Math.floor(Math.random() * pool.length)].toUpperCase();
+  }
+
+  getMinibossWord() {
+    const pool = WORDS.miniboss;
+    return pool[Math.floor(Math.random() * pool.length)].toUpperCase();
+  }
+
+  shouldSpawnMiniboss() {
+    // Mini-bosses appear after wave 2, chance increases with wave number
+    if (this.wave <= 2 || this.isBossWave) return false;
+    // One mini-boss per wave, spawned at a random point
+    const minibossCount = this.zombies.filter(z => z.type === 'miniboss' && z.alive).length;
+    if (minibossCount > 0) return false;
+    // Spawn miniboss roughly 1/3 through the wave
+    const progress = this.zombiesSpawned / this.zombiesInWave;
+    return progress > 0.25 && progress < 0.35;
+  }
+
   spawnZombie() {
-    const word = this.getWordForWave();
-    const side = Math.random();
-    let x, y;
-    if (side < 0.6) {
-      // Top
-      x = 60 + Math.random() * (CANVAS_W - 120);
-      y = -30;
-    } else if (side < 0.8) {
-      // Left
-      x = -30;
-      y = 50 + Math.random() * 200;
-    } else {
-      // Right
-      x = CANVAS_W + 30;
-      y = 50 + Math.random() * 200;
+    const cfg = this.getDiffConfig();
+
+    // Boss wave: spawn boss first, then escorts
+    if (this.isBossWave && !this.bossSpawned) {
+      this.spawnBoss();
+      this.bossSpawned = true;
+      this.zombiesSpawned++;
+      return;
     }
 
-    const diffMult = this.difficulty === 'easy' ? 0.6 : (this.difficulty === 'hard' ? 1.3 : 1.0);
-    const baseSpeed = 20 + this.wave * 3 + Math.random() * 15;
-    const speed = baseSpeed * diffMult;
+    // Check for mini-boss
+    if (this.shouldSpawnMiniboss()) {
+      this.spawnMiniboss();
+      this.zombiesSpawned++;
+      return;
+    }
 
-    this.zombies.push(new Zombie(word, x, y, speed));
+    // Normal zombie
+    const word = this.getWordForWave();
+    const pos = this._randomSpawnPos();
+    const baseSpeed = 20 + this.wave * 3 + Math.random() * 15;
+    const speed = baseSpeed * cfg.speedMult;
+
+    this.zombies.push(new Zombie(word, pos.x, pos.y, speed, 'normal'));
     this.zombiesSpawned++;
+  }
+
+  spawnBoss() {
+    const text = this.getBossText();
+    const x = CANVAS_W / 2 + (Math.random() - 0.5) * 200;
+    const y = -60;
+    const cfg = this.getDiffConfig();
+    // Boss moves slowly
+    const speed = (8 + this.wave * 1.5) * cfg.speedMult * 0.5;
+
+    const boss = new Zombie(text, x, y, speed, 'boss');
+    this.zombies.push(boss);
+    this.audio.bossAppear();
+    this.screenShake = 0.4;
+  }
+
+  spawnMiniboss() {
+    const word = this.getMinibossWord();
+    const pos = this._randomSpawnPos();
+    const cfg = this.getDiffConfig();
+    const speed = (15 + this.wave * 2) * cfg.speedMult * 0.7;
+
+    this.zombies.push(new Zombie(word, pos.x, pos.y, speed, 'miniboss'));
+  }
+
+  _randomSpawnPos() {
+    const side = Math.random();
+    if (side < 0.6) return { x: 60 + Math.random() * (CANVAS_W - 120), y: -30 };
+    if (side < 0.8) return { x: -30, y: 50 + Math.random() * 200 };
+    return { x: CANVAS_W + 30, y: 50 + Math.random() * 200 };
   }
 
   killZombie(zombie) {
@@ -775,38 +1214,51 @@ class Game {
     if (this.combo > this.maxCombo) this.maxCombo = this.combo;
     this.totalKills++;
 
-    // Score: word length * 100 * combo multiplier
+    // Score multipliers by zombie type
+    let basePoints = zombie.word.length * 100;
+    if (zombie.type === 'miniboss') basePoints *= 3;
+    if (zombie.type === 'boss') basePoints *= 5;
+
     const comboMult = Math.min(1 + (this.combo - 1) * 0.25, 5);
-    const points = Math.floor(zombie.word.length * 100 * comboMult);
+    const points = Math.floor(basePoints * comboMult);
     this.score += points;
 
     // Screen shake
-    this.screenShake = 0.15;
+    this.screenShake = zombie.type === 'boss' ? 0.6 : (zombie.type === 'miniboss' ? 0.3 : 0.15);
 
     // Death particles
-    for (let i = 0; i < 15; i++) {
+    const count = zombie.type === 'boss' ? 40 : (zombie.type === 'miniboss' ? 25 : 15);
+    for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = 50 + Math.random() * 200;
+      const spd = 50 + Math.random() * (zombie.type === 'boss' ? 400 : 200);
+      const colors = zombie.type === 'boss'
+        ? ['#ff4444', '#ff8844', '#ffaa00', '#ff0000']
+        : (zombie.type === 'miniboss'
+          ? ['#aa44ff', '#cc66ff', '#8800cc', '#ff44ff']
+          : ['#ff4444', '#ff8844']);
       this.particles.push(new Particle(
         zombie.x, zombie.y,
-        Math.cos(angle) * speed, Math.sin(angle) * speed,
-        Math.random() < 0.5 ? '#ff4444' : '#ff8844',
-        0.5 + Math.random() * 0.5,
-        2 + Math.random() * 4
+        Math.cos(angle) * spd, Math.sin(angle) * spd,
+        colors[Math.floor(Math.random() * colors.length)],
+        0.5 + Math.random() * (zombie.type === 'boss' ? 1.0 : 0.5),
+        2 + Math.random() * (zombie.type === 'boss' ? 8 : 4)
       ));
     }
 
-    this.audio.zombieDeath();
+    if (zombie.type === 'boss') {
+      this.audio.bossDeath();
+    } else {
+      this.audio.zombieDeath();
+    }
     this.audio.comboSound(this.combo);
   }
 
-  damagePlayer() {
-    this.lives--;
+  damagePlayer(amount) {
+    this.lives -= (amount || 1);
     this.combo = 0;
     this.screenShake = 0.3;
     this.audio.playerHit();
 
-    // Red flash particles at bottom
     for (let i = 0; i < 20; i++) {
       this.particles.push(new Particle(
         PLAYER_X + (Math.random() - 0.5) * 100, PLAYER_Y,
@@ -816,6 +1268,7 @@ class Game {
     }
 
     if (this.lives <= 0) {
+      this.lives = 0;
       this.endGame();
     }
   }
@@ -823,14 +1276,11 @@ class Game {
   endGame() {
     this.state = 'gameover';
     this.audio.gameOver();
-
-    // Update stats
     this.stats.totalKills += this.totalKills;
     this.stats.totalGames++;
     if (this.wave > this.stats.bestWave) this.stats.bestWave = this.wave;
     if (this.maxCombo > this.stats.bestCombo) this.stats.bestCombo = this.maxCombo;
     this.saveStats();
-
     this.highScoreRank = this.addHighScore(this.score, this.wave);
   }
 
@@ -838,37 +1288,29 @@ class Game {
   update(dt) {
     if (this.state !== 'playing') return;
 
-    // Screen shake decay
     if (this.screenShake > 0) {
       this.screenShake -= dt;
       this.screenShakeX = (Math.random() - 0.5) * this.screenShake * 30;
       this.screenShakeY = (Math.random() - 0.5) * this.screenShake * 30;
     } else {
-      this.screenShakeX = 0;
-      this.screenShakeY = 0;
+      this.screenShakeX = 0; this.screenShakeY = 0;
     }
 
-    // Wave management
     if (this.waveComplete) {
       this.waveTimer -= dt;
-      if (this.waveTimer <= 0) {
-        this.startWave();
-      }
+      if (this.waveTimer <= 0) this.startWave();
       return;
     }
 
-    // Wave announcement
-    if (this.waveAnnounceTimer > 0) {
-      this.waveAnnounceTimer -= dt;
-    }
+    if (this.waveAnnounceTimer > 0) this.waveAnnounceTimer -= dt;
 
     // Spawn zombies
     if (this.zombiesSpawned < this.zombiesInWave) {
       this.spawnTimer -= dt;
       if (this.spawnTimer <= 0) {
         this.spawnZombie();
-        const diffMult = this.difficulty === 'easy' ? 1.4 : (this.difficulty === 'hard' ? 0.6 : 1.0);
-        this.spawnTimer = Math.max(0.5, (2.5 - this.wave * 0.15)) * diffMult;
+        const cfg = this.getDiffConfig();
+        this.spawnTimer = Math.max(0.3, (2.5 - this.wave * 0.12)) * cfg.spawnMult;
       }
     }
 
@@ -878,47 +1320,36 @@ class Game {
       const alive = z.update(dt);
 
       if (!alive) {
-        // Remove dead zombie after death animation
-        if (z === this.targetZombie) {
-          this.targetZombie = null;
-          this.currentInput = '';
-        }
+        if (z === this.targetZombie) { this.targetZombie = null; this.currentInput = ''; }
         this.zombies.splice(i, 1);
         continue;
       }
 
-      // Check if zombie reached player
       if (z.reachedPlayer()) {
-        if (z === this.targetZombie) {
-          this.targetZombie = null;
-          this.currentInput = '';
-        }
+        if (z === this.targetZombie) { this.targetZombie = null; this.currentInput = ''; }
         z.alive = false;
         this.zombies.splice(i, 1);
-        this.damagePlayer();
+        this.damagePlayer(z.damageAmount);
       }
     }
 
     // Check wave complete
-    if (this.zombiesSpawned >= this.zombiesInWave && this.zombies.filter(z => z.alive).length === 0) {
+    const aliveCount = this.zombies.filter(z => z.alive).length;
+    if (this.zombiesSpawned >= this.zombiesInWave && aliveCount === 0) {
       this.waveComplete = true;
-      this.waveTimer = 2.5;
-      // Wave bonus
+      this.waveTimer = this.isBossWave ? 3.5 : 2.5;
       this.score += this.wave * 200;
+      if (this.isBossWave) this.score += this.wave * 500; // boss wave bonus
     }
 
-    // Update particles
+    // Update effects
     for (let i = this.particles.length - 1; i >= 0; i--) {
       this.particles[i].update(dt);
       if (this.particles[i].life <= 0) this.particles.splice(i, 1);
     }
-
-    // Update tracers
     for (let i = this.tracers.length - 1; i >= 0; i--) {
       if (!this.tracers[i].update(dt)) this.tracers.splice(i, 1);
     }
-
-    // Update flashes
     for (let i = this.flashes.length - 1; i >= 0; i--) {
       if (!this.flashes[i].update(dt)) this.flashes.splice(i, 1);
     }
@@ -928,12 +1359,9 @@ class Game {
   draw() {
     const ctx = this.ctx;
     ctx.save();
-
-    // Apply screen shake
     if (this.state === 'playing' || this.state === 'gameover') {
       ctx.translate(this.screenShakeX, this.screenShakeY);
     }
-
     switch (this.state) {
       case 'menu': this.drawMenu(ctx); break;
       case 'playing':
@@ -945,7 +1373,6 @@ class Game {
       case 'highscores': this.drawHighScores(ctx); break;
       case 'options': this.drawOptions(ctx); break;
     }
-
     ctx.restore();
   }
 
@@ -956,76 +1383,57 @@ class Game {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-    // Stars
     ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
     for (let i = 0; i < 50; i++) {
-      // Use deterministic "random" based on index
-      const sx = ((i * 137.5) % CANVAS_W);
-      const sy = ((i * 73.1) % (GROUND_Y - 50));
-      const size = ((i * 31.7) % 3) + 0.5;
       ctx.beginPath();
-      ctx.arc(sx, sy, size, 0, Math.PI * 2);
+      ctx.arc((i * 137.5) % CANVAS_W, (i * 73.1) % (GROUND_Y - 50), ((i * 31.7) % 3) + 0.5, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // Ground
     ctx.fillStyle = '#16213e';
     ctx.fillRect(0, GROUND_Y, CANVAS_W, CANVAS_H - GROUND_Y);
-
-    // Ground grid
-    ctx.strokeStyle = '#0f3460';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#0f3460'; ctx.lineWidth = 1;
     for (let i = 0; i < CANVAS_W; i += 50) {
-      ctx.beginPath();
-      ctx.moveTo(i, GROUND_Y);
-      ctx.lineTo(i + 25, CANVAS_H);
-      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(i, GROUND_Y); ctx.lineTo(i + 25, CANVAS_H); ctx.stroke();
     }
     for (let y = GROUND_Y; y < CANVAS_H; y += 20) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(CANVAS_W, y);
-      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CANVAS_W, y); ctx.stroke();
     }
   }
 
   drawPlayer(ctx) {
-    // Crosshair
-    ctx.strokeStyle = '#00ff41';
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#00ff41'; ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(PLAYER_X - 20, PLAYER_Y);
-    ctx.lineTo(PLAYER_X + 20, PLAYER_Y);
-    ctx.moveTo(PLAYER_X, PLAYER_Y - 20);
-    ctx.lineTo(PLAYER_X, PLAYER_Y + 20);
+    ctx.moveTo(PLAYER_X - 20, PLAYER_Y); ctx.lineTo(PLAYER_X + 20, PLAYER_Y);
+    ctx.moveTo(PLAYER_X, PLAYER_Y - 20); ctx.lineTo(PLAYER_X, PLAYER_Y + 20);
     ctx.stroke();
-
     ctx.fillStyle = '#00ff41';
-    ctx.beginPath();
-    ctx.arc(PLAYER_X, PLAYER_Y, 6, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = '#00ff41';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(PLAYER_X, PLAYER_Y, 14, 0, Math.PI * 2);
-    ctx.stroke();
+    ctx.beginPath(); ctx.arc(PLAYER_X, PLAYER_Y, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#00ff41'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(PLAYER_X, PLAYER_Y, 14, 0, Math.PI * 2); ctx.stroke();
   }
 
   drawHUD(ctx) {
+    const cfg = DIFF_CONFIG[this.difficulty];
+
     // Score box
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     ctx.fillRect(10, 10, 220, 70);
-    ctx.strokeStyle = '#00ff41';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#00ff41'; ctx.lineWidth = 2;
     ctx.strokeRect(10, 10, 220, 70);
-
     ctx.font = 'bold 18px monospace';
     ctx.fillStyle = '#00ff41';
     ctx.fillText(`SCORE: ${this.score.toLocaleString()}`, 22, 35);
-    ctx.fillText(`WAVE: ${this.wave}`, 22, 58);
 
-    // Combo
+    // Wave display (highlight boss waves)
+    if (this.isBossWave) {
+      ctx.fillStyle = '#ff4444';
+      ctx.fillText(`WAVE: ${this.wave} [BOSS]`, 22, 58);
+    } else {
+      ctx.fillStyle = '#00ff41';
+      ctx.fillText(`WAVE: ${this.wave}`, 22, 58);
+    }
+
     if (this.combo > 1) {
       ctx.fillStyle = '#ffaa00';
       ctx.font = 'bold 16px monospace';
@@ -1034,61 +1442,69 @@ class Game {
 
     // Lives
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(CANVAS_W - 200, 10, 190, 40);
-    ctx.strokeStyle = '#ff4444';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(CANVAS_W - 200, 10, 190, 40);
+    ctx.fillRect(CANVAS_W - 200, 10, 190, 50);
+    ctx.strokeStyle = '#ff4444'; ctx.lineWidth = 2;
+    ctx.strokeRect(CANVAS_W - 200, 10, 190, 50);
 
     ctx.font = 'bold 18px monospace';
     ctx.fillStyle = '#ff4444';
     let hearts = '';
+    const maxLives = this.difficulty === 'nightmare' || this.difficulty === 'extreme' ? 2 : 3;
     for (let i = 0; i < this.lives; i++) hearts += '\u2764 ';
-    for (let i = this.lives; i < 3; i++) hearts += '\u2661 ';
+    for (let i = this.lives; i < maxLives; i++) hearts += '\u2661 ';
     ctx.fillText(`LIVES: ${hearts}`, CANVAS_W - 188, 36);
 
-    // Difficulty indicator
     ctx.font = '12px monospace';
-    ctx.fillStyle = '#666';
-    ctx.fillText(this.difficulty.toUpperCase(), CANVAS_W - 188, 62);
+    ctx.fillStyle = cfg.color;
+    ctx.fillText(cfg.label, CANVAS_W - 188, 52);
 
-    // Input box
+    // Input box (wider for boss text)
+    const inputW = this.targetZombie && this.targetZombie.type === 'boss' ? 450 : 320;
     ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
-    ctx.fillRect(CANVAS_W / 2 - 160, CANVAS_H - 48, 320, 40);
-    ctx.strokeStyle = this.targetZombie ? '#00ff41' : '#335533';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(CANVAS_W / 2 - 160, CANVAS_H - 48, 320, 40);
+    ctx.fillRect(CANVAS_W / 2 - inputW / 2, CANVAS_H - 48, inputW, 40);
 
-    ctx.font = 'bold 22px monospace';
+    let borderColor = '#335533';
+    if (this.targetZombie) {
+      if (this.targetZombie.type === 'boss') borderColor = '#ff4444';
+      else if (this.targetZombie.type === 'miniboss') borderColor = '#aa44ff';
+      else borderColor = '#00ff41';
+    }
+    ctx.strokeStyle = borderColor; ctx.lineWidth = 2;
+    ctx.strokeRect(CANVAS_W / 2 - inputW / 2, CANVAS_H - 48, inputW, 40);
+
+    ctx.font = 'bold 18px monospace';
     ctx.fillStyle = '#00ff41';
     const displayText = this.currentInput || '';
     const cursor = (Date.now() % 1000 < 500) ? '_' : ' ';
-    ctx.fillText(`> ${displayText}${cursor}`, CANVAS_W / 2 - 145, CANVAS_H - 22);
+    // Truncate display for very long boss text
+    const maxDisplay = Math.floor((inputW - 50) / 11);
+    const shown = displayText.length > maxDisplay
+      ? '...' + displayText.slice(displayText.length - maxDisplay + 3)
+      : displayText;
+    ctx.fillText(`> ${shown}${cursor}`, CANVAS_W / 2 - inputW / 2 + 10, CANVAS_H - 22);
   }
 
   drawGameplay(ctx) {
     this.drawBackground(ctx);
     this.drawPlayer(ctx);
 
-    // Draw tracers
     this.tracers.forEach(t => t.draw(ctx));
-
-    // Draw flashes
     this.flashes.forEach(f => f.draw(ctx));
 
-    // Draw zombies (sort by y for depth)
-    const sortedZombies = [...this.zombies].sort((a, b) => a.y - b.y);
-    sortedZombies.forEach(z => z.draw(ctx));
+    const sorted = [...this.zombies].sort((a, b) => a.y - b.y);
+    sorted.forEach(z => z.draw(ctx));
 
-    // Draw particles
     this.particles.forEach(p => p.draw(ctx));
 
     // Target indicator
     if (this.targetZombie && this.targetZombie.alive && !this.targetZombie.dying) {
-      ctx.strokeStyle = '#00ff41';
+      const tz = this.targetZombie;
+      const indicatorColor = tz.type === 'boss' ? '#ff4444' : (tz.type === 'miniboss' ? '#aa44ff' : '#00ff41');
+      ctx.strokeStyle = indicatorColor;
       ctx.lineWidth = 2;
       ctx.setLineDash([5, 5]);
       ctx.beginPath();
-      ctx.arc(this.targetZombie.x, this.targetZombie.y, this.targetZombie.radius + 10, 0, Math.PI * 2);
+      ctx.arc(tz.x, tz.y, tz.radius + 10, 0, Math.PI * 2);
       ctx.stroke();
       ctx.setLineDash([]);
     }
@@ -1097,38 +1513,62 @@ class Game {
     if (this.waveAnnounceTimer > 0) {
       const alpha = Math.min(1, this.waveAnnounceTimer / 0.5);
       ctx.globalAlpha = alpha;
-      ctx.font = 'bold 48px monospace';
-      ctx.fillStyle = '#ff4444';
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 4;
-      const text = `WAVE ${this.wave}`;
-      const tw = ctx.measureText(text).width;
-      ctx.strokeText(text, CANVAS_W / 2 - tw / 2, CANVAS_H / 2 - 50);
-      ctx.fillText(text, CANVAS_W / 2 - tw / 2, CANVAS_H / 2 - 50);
 
-      ctx.font = '24px monospace';
-      ctx.fillStyle = '#ffffff';
-      const sub = `${this.zombiesInWave} zombies incoming`;
-      const sw = ctx.measureText(sub).width;
-      ctx.strokeText(sub, CANVAS_W / 2 - sw / 2, CANVAS_H / 2 - 10);
-      ctx.fillText(sub, CANVAS_W / 2 - sw / 2, CANVAS_H / 2 - 10);
+      if (this.isBossWave) {
+        // Boss wave announcement
+        ctx.font = 'bold 52px monospace';
+        ctx.fillStyle = '#ff0000';
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 5;
+        const text = `WAVE ${this.wave}`;
+        let tw = ctx.measureText(text).width;
+        ctx.strokeText(text, CANVAS_W / 2 - tw / 2, CANVAS_H / 2 - 60);
+        ctx.fillText(text, CANVAS_W / 2 - tw / 2, CANVAS_H / 2 - 60);
+
+        ctx.font = 'bold 36px monospace';
+        ctx.fillStyle = '#ff4444';
+        const boss = 'BOSS BATTLE';
+        tw = ctx.measureText(boss).width;
+        ctx.strokeText(boss, CANVAS_W / 2 - tw / 2, CANVAS_H / 2 - 15);
+        ctx.fillText(boss, CANVAS_W / 2 - tw / 2, CANVAS_H / 2 - 15);
+
+        ctx.font = '20px monospace';
+        ctx.fillStyle = '#ffaa00';
+        const sub = 'prepare yourself...';
+        const sw = ctx.measureText(sub).width;
+        ctx.fillText(sub, CANVAS_W / 2 - sw / 2, CANVAS_H / 2 + 20);
+      } else {
+        ctx.font = 'bold 48px monospace';
+        ctx.fillStyle = '#ff4444';
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
+        const text = `WAVE ${this.wave}`;
+        const tw = ctx.measureText(text).width;
+        ctx.strokeText(text, CANVAS_W / 2 - tw / 2, CANVAS_H / 2 - 50);
+        ctx.fillText(text, CANVAS_W / 2 - tw / 2, CANVAS_H / 2 - 50);
+
+        ctx.font = '24px monospace';
+        ctx.fillStyle = '#ffffff';
+        const sub = `${this.zombiesInWave} zombies incoming`;
+        const sw = ctx.measureText(sub).width;
+        ctx.strokeText(sub, CANVAS_W / 2 - sw / 2, CANVAS_H / 2 - 10);
+        ctx.fillText(sub, CANVAS_W / 2 - sw / 2, CANVAS_H / 2 - 10);
+      }
       ctx.globalAlpha = 1;
     }
 
-    // Wave complete message
+    // Wave complete
     if (this.waveComplete && this.wave > 0) {
       ctx.font = 'bold 32px monospace';
       ctx.fillStyle = '#00ff41';
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 3;
-      const text = 'WAVE COMPLETE!';
-      const tw = ctx.measureText(text).width;
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+      const text = this.isBossWave ? 'BOSS DEFEATED!' : 'WAVE COMPLETE!';
+      let tw = ctx.measureText(text).width;
       ctx.strokeText(text, CANVAS_W / 2 - tw / 2, CANVAS_H / 2 - 30);
       ctx.fillText(text, CANVAS_W / 2 - tw / 2, CANVAS_H / 2 - 30);
 
       ctx.font = '20px monospace';
       ctx.fillStyle = '#ffaa00';
-      const bonus = `Wave Bonus: +${this.wave * 200}`;
+      const totalBonus = this.wave * 200 + (this.isBossWave ? this.wave * 500 : 0);
+      const bonus = `Wave Bonus: +${totalBonus}`;
       const bw = ctx.measureText(bonus).width;
       ctx.strokeText(bonus, CANVAS_W / 2 - bw / 2, CANVAS_H / 2 + 10);
       ctx.fillText(bonus, CANVAS_W / 2 - bw / 2, CANVAS_H / 2 + 10);
@@ -1140,122 +1580,82 @@ class Game {
   drawMenu(ctx) {
     this.drawBackground(ctx);
 
-    // Ambient zombies in background
     ctx.globalAlpha = 0.15;
     for (let i = 0; i < 8; i++) {
       ctx.fillStyle = '#ff4444';
       ctx.beginPath();
-      ctx.arc(
-        ((i * 137) % CANVAS_W),
-        150 + ((i * 89) % 300),
-        20 + (i % 3) * 5,
-        0, Math.PI * 2
-      );
+      ctx.arc((i * 137) % CANVAS_W, 150 + (i * 89) % 300, 20 + (i % 3) * 5, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
 
-    // Title
     ctx.font = 'bold 56px monospace';
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 6;
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 6;
     const title = 'TYPE OF THE DEAD';
     const titleW = ctx.measureText(title).width;
     const titleX = CANVAS_W / 2 - titleW / 2;
     ctx.strokeText(title, titleX, 130);
-
-    // Title with gradient
     const titleGrad = ctx.createLinearGradient(titleX, 80, titleX, 140);
     titleGrad.addColorStop(0, '#ff6666');
     titleGrad.addColorStop(1, '#cc0000');
     ctx.fillStyle = titleGrad;
     ctx.fillText(title, titleX, 130);
-
-    // Title glow
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = 'rgba(255, 0, 0, 0.5)';
+    ctx.shadowBlur = 20; ctx.shadowColor = 'rgba(255, 0, 0, 0.5)';
     ctx.fillText(title, titleX, 130);
     ctx.shadowBlur = 0;
 
-    // Subtitle
     ctx.font = 'italic 18px monospace';
     ctx.fillStyle = '#00ff41';
     const sub = 'Survive the zombie apocalypse with your keyboard';
-    const subW = ctx.measureText(sub).width;
-    ctx.fillText(sub, CANVAS_W / 2 - subW / 2, 170);
+    ctx.fillText(sub, CANVAS_W / 2 - ctx.measureText(sub).width / 2, 170);
 
-    // Menu items
     this.menuItems.forEach((item, i) => {
       const y = 260 + i * 80;
-      const selected = i === this.menuSelection;
-
-      ctx.fillStyle = selected ? 'rgba(255, 68, 68, 0.3)' : 'rgba(255, 68, 68, 0.1)';
+      const sel = i === this.menuSelection;
+      ctx.fillStyle = sel ? 'rgba(255, 68, 68, 0.3)' : 'rgba(255, 68, 68, 0.1)';
       ctx.fillRect(CANVAS_W / 2 - 160, y, 320, 60);
-
-      ctx.strokeStyle = selected ? '#ff4444' : '#662222';
-      ctx.lineWidth = selected ? 3 : 1;
+      ctx.strokeStyle = sel ? '#ff4444' : '#662222';
+      ctx.lineWidth = sel ? 3 : 1;
       ctx.strokeRect(CANVAS_W / 2 - 160, y, 320, 60);
-
-      if (selected) {
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = 'rgba(255, 68, 68, 0.5)';
-      }
-
-      ctx.font = `bold 24px monospace`;
-      ctx.fillStyle = selected ? '#ffffff' : '#888888';
+      if (sel) { ctx.shadowBlur = 10; ctx.shadowColor = 'rgba(255, 68, 68, 0.5)'; }
+      ctx.font = 'bold 24px monospace';
+      ctx.fillStyle = sel ? '#ffffff' : '#888888';
       const iw = ctx.measureText(item).width;
       ctx.fillText(item, CANVAS_W / 2 - iw / 2, y + 38);
       ctx.shadowBlur = 0;
-
-      if (selected) {
-        ctx.fillStyle = '#ff4444';
-        ctx.fillText('>', CANVAS_W / 2 - iw / 2 - 30, y + 38);
-      }
+      if (sel) { ctx.fillStyle = '#ff4444'; ctx.fillText('>', CANVAS_W / 2 - iw / 2 - 30, y + 38); }
     });
 
-    // Controls hint
-    ctx.font = '14px monospace';
-    ctx.fillStyle = '#555';
+    ctx.font = '14px monospace'; ctx.fillStyle = '#555';
     ctx.fillText('Arrow Keys to navigate | Enter to select', CANVAS_W / 2 - 180, CANVAS_H - 30);
   }
 
   drawPause(ctx) {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-
     ctx.font = 'bold 48px monospace';
-    ctx.fillStyle = '#00ff41';
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 4;
+    ctx.fillStyle = '#00ff41'; ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
     const text = 'PAUSED';
     const tw = ctx.measureText(text).width;
     ctx.strokeText(text, CANVAS_W / 2 - tw / 2, CANVAS_H / 2 - 20);
     ctx.fillText(text, CANVAS_W / 2 - tw / 2, CANVAS_H / 2 - 20);
-
-    ctx.font = '20px monospace';
-    ctx.fillStyle = '#aaa';
+    ctx.font = '20px monospace'; ctx.fillStyle = '#aaa';
     const hint = 'Press ESC or SPACE to resume';
-    const hw = ctx.measureText(hint).width;
-    ctx.fillText(hint, CANVAS_W / 2 - hw / 2, CANVAS_H / 2 + 30);
+    ctx.fillText(hint, CANVAS_W / 2 - ctx.measureText(hint).width / 2, CANVAS_H / 2 + 30);
   }
 
   drawGameOver(ctx) {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-    // Game Over title
     ctx.font = 'bold 64px monospace';
-    ctx.fillStyle = '#ff0000';
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 5;
+    ctx.fillStyle = '#ff0000'; ctx.strokeStyle = '#000'; ctx.lineWidth = 5;
     const title = 'GAME OVER';
     const tw = ctx.measureText(title).width;
     ctx.strokeText(title, CANVAS_W / 2 - tw / 2, CANVAS_H / 2 - 80);
     ctx.fillText(title, CANVAS_W / 2 - tw / 2, CANVAS_H / 2 - 80);
 
-    // Stats
-    ctx.font = 'bold 24px monospace';
-    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 24px monospace'; ctx.fillStyle = '#ffffff';
     const lines = [
       `Final Score: ${this.score.toLocaleString()}`,
       `Wave Reached: ${this.wave}`,
@@ -1263,151 +1663,133 @@ class Game {
       `Max Combo: ${this.maxCombo}x`,
       `Accuracy: ${this.totalLettersTyped > 0 ? Math.round((1 - this.totalErrors / this.totalLettersTyped) * 100) : 0}%`
     ];
-
     lines.forEach((line, i) => {
       const lw = ctx.measureText(line).width;
       ctx.fillText(line, CANVAS_W / 2 - lw / 2, CANVAS_H / 2 - 20 + i * 35);
     });
 
-    // High score indicator
     if (this.highScoreRank === 0) {
-      ctx.font = 'bold 28px monospace';
-      ctx.fillStyle = '#ffaa00';
+      ctx.font = 'bold 28px monospace'; ctx.fillStyle = '#ffaa00';
       const hs = 'NEW HIGH SCORE!';
-      const hsw = ctx.measureText(hs).width;
-      ctx.fillText(hs, CANVAS_W / 2 - hsw / 2, CANVAS_H / 2 + 165);
+      ctx.fillText(hs, CANVAS_W / 2 - ctx.measureText(hs).width / 2, CANVAS_H / 2 + 165);
     } else if (this.highScoreRank !== -1 && this.highScoreRank < 10) {
-      ctx.font = '20px monospace';
-      ctx.fillStyle = '#ffaa00';
+      ctx.font = '20px monospace'; ctx.fillStyle = '#ffaa00';
       const hs = `Ranked #${this.highScoreRank + 1} on leaderboard!`;
-      const hsw = ctx.measureText(hs).width;
-      ctx.fillText(hs, CANVAS_W / 2 - hsw / 2, CANVAS_H / 2 + 165);
+      ctx.fillText(hs, CANVAS_W / 2 - ctx.measureText(hs).width / 2, CANVAS_H / 2 + 165);
     }
 
-    // Continue hint
-    ctx.font = '18px monospace';
-    ctx.fillStyle = '#666';
+    ctx.font = '18px monospace'; ctx.fillStyle = '#666';
     const hint = 'Press SPACE to continue';
-    const hw = ctx.measureText(hint).width;
-    ctx.fillText(hint, CANVAS_W / 2 - hw / 2, CANVAS_H / 2 + 200);
+    ctx.fillText(hint, CANVAS_W / 2 - ctx.measureText(hint).width / 2, CANVAS_H / 2 + 200);
   }
 
   drawHighScores(ctx) {
     this.drawBackground(ctx);
-
     ctx.font = 'bold 40px monospace';
-    ctx.fillStyle = '#ff4444';
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 4;
+    ctx.fillStyle = '#ff4444'; ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
     const title = 'HIGH SCORES';
     const tw = ctx.measureText(title).width;
     ctx.strokeText(title, CANVAS_W / 2 - tw / 2, 70);
     ctx.fillText(title, CANVAS_W / 2 - tw / 2, 70);
 
     if (this.highScores.length === 0) {
-      ctx.font = '20px monospace';
-      ctx.fillStyle = '#666';
+      ctx.font = '20px monospace'; ctx.fillStyle = '#666';
       ctx.fillText('No scores yet. Go kill some zombies!', CANVAS_W / 2 - 210, CANVAS_H / 2);
     } else {
-      // Header
-      ctx.font = 'bold 16px monospace';
-      ctx.fillStyle = '#00ff41';
-      ctx.fillText('RANK  SCORE         WAVE  DIFFICULTY  DATE', 120, 120);
-
-      ctx.font = '16px monospace';
+      ctx.font = 'bold 14px monospace'; ctx.fillStyle = '#00ff41';
+      ctx.fillText('RANK  SCORE         WAVE  DIFFICULTY    DATE', 90, 120);
+      ctx.font = '14px monospace';
       this.highScores.forEach((entry, i) => {
-        const y = 155 + i * 35;
+        const y = 150 + i * 32;
         ctx.fillStyle = i === 0 ? '#ffaa00' : (i < 3 ? '#cccccc' : '#888888');
         const rank = `#${(i + 1).toString().padStart(2)}`;
         const score = entry.score.toLocaleString().padStart(12);
         const wave = entry.wave.toString().padStart(4);
-        const diff = (entry.difficulty || 'normal').padStart(10);
+        const diff = (entry.difficulty || 'normal').padStart(12);
         const date = entry.date || '';
-        ctx.fillText(`${rank}  ${score}   ${wave}  ${diff}  ${date}`, 120, y);
+        ctx.fillText(`${rank}  ${score}   ${wave}  ${diff}  ${date}`, 90, y);
       });
     }
 
-    // Stats
-    ctx.font = 'bold 18px monospace';
-    ctx.fillStyle = '#00ff41';
-    ctx.fillText('CAREER STATS', 120, CANVAS_H - 130);
-    ctx.font = '14px monospace';
-    ctx.fillStyle = '#aaa';
-    ctx.fillText(`Total Games: ${this.stats.totalGames}  |  Total Kills: ${this.stats.totalKills}  |  Best Wave: ${this.stats.bestWave}  |  Best Combo: ${this.stats.bestCombo}x`, 120, CANVAS_H - 100);
-
-    ctx.font = '14px monospace';
-    ctx.fillStyle = '#555';
+    ctx.font = 'bold 18px monospace'; ctx.fillStyle = '#00ff41';
+    ctx.fillText('CAREER STATS', 90, CANVAS_H - 130);
+    ctx.font = '14px monospace'; ctx.fillStyle = '#aaa';
+    ctx.fillText(`Games: ${this.stats.totalGames}  |  Kills: ${this.stats.totalKills}  |  Best Wave: ${this.stats.bestWave}  |  Best Combo: ${this.stats.bestCombo}x`, 90, CANVAS_H - 100);
+    ctx.font = '14px monospace'; ctx.fillStyle = '#555';
     ctx.fillText('Press ESC or SPACE to return', CANVAS_W / 2 - 130, CANVAS_H - 30);
   }
 
   drawOptions(ctx) {
     this.drawBackground(ctx);
-
     ctx.font = 'bold 40px monospace';
-    ctx.fillStyle = '#ff4444';
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 4;
+    ctx.fillStyle = '#ff4444'; ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
     const title = 'OPTIONS';
     const tw = ctx.measureText(title).width;
     ctx.strokeText(title, CANVAS_W / 2 - tw / 2, 100);
     ctx.fillText(title, CANVAS_W / 2 - tw / 2, 100);
 
+    const cfg = DIFF_CONFIG[this.difficulty];
     const options = [
-      { label: 'Difficulty', value: this.difficulty.toUpperCase(), hint: 'Arrow Left/Right to change' },
-      { label: 'Sound', value: this.audio.muted ? 'OFF' : 'ON', hint: 'Enter to toggle' },
+      { label: 'Difficulty', value: cfg.label, hint: 'Arrow Left/Right to change', valueColor: cfg.color },
+      { label: 'Sound', value: this.audio.muted ? 'OFF' : 'ON', hint: 'Enter to toggle', valueColor: null },
     ];
 
     options.forEach((opt, i) => {
-      const y = 220 + i * 100;
-      const selected = i === this.optionSelection;
+      const y = 200 + i * 100;
+      const sel = i === this.optionSelection;
 
-      ctx.fillStyle = selected ? 'rgba(0, 255, 65, 0.1)' : 'rgba(0, 0, 0, 0.3)';
-      ctx.fillRect(CANVAS_W / 2 - 200, y - 20, 400, 60);
-      ctx.strokeStyle = selected ? '#00ff41' : '#333';
-      ctx.lineWidth = selected ? 2 : 1;
-      ctx.strokeRect(CANVAS_W / 2 - 200, y - 20, 400, 60);
+      ctx.fillStyle = sel ? 'rgba(0, 255, 65, 0.1)' : 'rgba(0, 0, 0, 0.3)';
+      ctx.fillRect(CANVAS_W / 2 - 220, y - 20, 440, 60);
+      ctx.strokeStyle = sel ? '#00ff41' : '#333';
+      ctx.lineWidth = sel ? 2 : 1;
+      ctx.strokeRect(CANVAS_W / 2 - 220, y - 20, 440, 60);
 
-      ctx.font = 'bold 22px monospace';
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(opt.label, CANVAS_W / 2 - 180, y + 8);
+      ctx.font = 'bold 22px monospace'; ctx.fillStyle = '#ffffff';
+      ctx.fillText(opt.label, CANVAS_W / 2 - 200, y + 8);
 
-      ctx.fillStyle = selected ? '#00ff41' : '#888';
+      ctx.fillStyle = opt.valueColor || (sel ? '#00ff41' : '#888');
       const vw = ctx.measureText(opt.value).width;
-      ctx.fillText(opt.value, CANVAS_W / 2 + 180 - vw, y + 8);
+      ctx.fillText(opt.value, CANVAS_W / 2 + 200 - vw, y + 8);
 
-      if (selected) {
-        ctx.font = '12px monospace';
-        ctx.fillStyle = '#666';
-        ctx.fillText(opt.hint, CANVAS_W / 2 - 180, y + 30);
-
+      if (sel) {
+        ctx.font = '12px monospace'; ctx.fillStyle = '#666';
+        ctx.fillText(opt.hint, CANVAS_W / 2 - 200, y + 30);
         ctx.fillStyle = '#00ff41';
-        ctx.fillText('>', CANVAS_W / 2 - 195, y + 8);
+        ctx.font = 'bold 22px monospace';
+        ctx.fillText('>', CANVAS_W / 2 - 215, y + 8);
       }
     });
 
+    // Difficulty description
+    const descs = {
+      easy: 'Slower zombies, shorter words, 3 lives. Great for learning.',
+      normal: 'Balanced speed and word difficulty. The standard experience.',
+      hard: 'Faster zombies, longer words. For experienced typists.',
+      extreme: 'Very fast, complex words, 2 lives. For 80+ WPM typists.',
+      nightmare: 'Relentless speed, massive words, 2 lives. Built for 120+ WPM.'
+    };
     ctx.font = '14px monospace';
-    ctx.fillStyle = '#555';
+    ctx.fillStyle = cfg.color;
+    const desc = descs[this.difficulty];
+    const dw = ctx.measureText(desc).width;
+    ctx.fillText(desc, CANVAS_W / 2 - dw / 2, 420);
+
+    ctx.font = '14px monospace'; ctx.fillStyle = '#555';
     ctx.fillText('Press ESC to return', CANVAS_W / 2 - 90, CANVAS_H - 30);
   }
 
   // --- Game Loop ---
   loop(timestamp) {
     if (this.lastTime === 0) this.lastTime = timestamp;
-    const dt = Math.min((timestamp - this.lastTime) / 1000, 0.05); // cap delta
+    const dt = Math.min((timestamp - this.lastTime) / 1000, 0.05);
     this.lastTime = timestamp;
-
     this.update(dt);
     this.draw();
-
     requestAnimationFrame((t) => this.loop(t));
   }
 }
 
-// --- Start ---
-window.addEventListener('load', () => {
-  new Game();
-});
-
+window.addEventListener('load', () => { new Game(); });
 })();
 </script>
 </body>
